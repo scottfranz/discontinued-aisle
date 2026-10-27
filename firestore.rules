@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Everyone can read the board. Each visitor (anonymous sign-in) can only write
+// their own votes doc and their own submissions doc. mod/hidden is edited by
+// you in the Firebase console.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /votes/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['picks', 'sent', 'skus', 'updatedAt'])
+        && request.resource.data.picks is map && request.resource.data.picks.size() <= 300
+        && request.resource.data.sent is map && request.resource.data.sent.size() <= 300
+        && request.resource.data.skus is map && request.resource.data.skus.size() <= 300;
+    }
+
+    match /submissions/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['items'])
+        && request.resource.data.items is list && request.resource.data.items.size() <= 10;
+    }
+
+    match /mod/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

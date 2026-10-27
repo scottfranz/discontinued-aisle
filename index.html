@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Discontinued Aisle</title>
+<meta name="description" content="A fan-made board for voting on discontinued Trader Joe's products you want back.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Caveat+Brush&family=Karla:wght@400;500;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+body { margin: 0 }
+[hidden] { display: none !important }
+/* Layout: one red page, a hand-lettered sign for a header, and a single ranked bar chart that doubles as the ballot. Single-theme by design. */
+:root {
+  --red: #C41E3A;        /* store-sign red */
+  --red-deep: #A3172F;   /* bar track, pressed states */
+  --red-ink: #7E0F22;
+  --cream: #FFF6E5;      /* hand-lettered sign paper */
+  --cream-muted: #F7D4CC;
+  --ink: #2A1A17;
+  --ink-muted: #6B5550;
+  --line: #E9D6C2;
+  --wordmark: "Rye", "Rockwell", Georgia, serif;
+  --display: "Caveat Brush", "Marker Felt", "Comic Sans MS", cursive;
+  --body: "Karla", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+html { background: var(--red) }
+body { background: var(--red); color: var(--cream); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 56px }
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 40px }
+h1, h2 { margin: 0; text-wrap: balance; font-weight: 400 }
+a { color: inherit }
+button, input, select, textarea { font: inherit; color: inherit }
+:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px }
+.card :focus-visible, dialog :focus-visible { outline-color: var(--red) }
+
+/* Header */
+header { display: grid; gap: 12px; text-align: center; justify-items: center }
+.tag { font: 700 12px/1 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--cream-muted) }
+h1 { font: 400 clamp(30px, 8.4vw, 66px)/1 var(--wordmark); text-transform: uppercase; letter-spacing: .01em; color: var(--cream) }
+h1 small { display: block; font-size: .42em; letter-spacing: .12em; margin-bottom: .2em }
+.lede { margin: 6px 0 0; max-width: 46ch; font-size: 18px; color: var(--cream) }
+.stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; font-size: 14px; color: var(--cream-muted); font-variant-numeric: tabular-nums }
+.stats b { font: 500 14px/1 var(--mono); color: var(--cream) }
+
+/* Leaderboard */
+.lb { display: grid; gap: 18px }
+.lb-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px }
+h2 { font: 400 40px/1 var(--display) }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; border: 2px solid var(--cream) }
+.seg button { border: 0; background: transparent; color: var(--cream); padding: 7px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--cream); color: var(--red) }
+.caption { margin: -8px 0 0; font-size: 14px; color: var(--cream-muted) }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px }
+.row { display: grid; grid-template-columns: 2.2em 56px minmax(0, 1fr) auto; gap: 4px 12px; align-items: center }
+.pic { position: relative; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; background: var(--cream); flex: none }
+.pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #FFFFFF }
+.pic .ill { position: absolute; inset: 9%; width: 82%; height: 82%; color: var(--red) }
+.pic.big { width: 88px; height: 88px }
+.rk { font: 500 14px/1 var(--mono); color: var(--cream-muted); text-align: right; font-variant-numeric: tabular-nums }
+.mid { display: grid; gap: 6px; min-width: 0 }
+.name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0 }
+.name strong { font-weight: 700; font-size: 17px; overflow-wrap: anywhere }
+.name .meta { font-size: 13px; color: var(--cream-muted) }
+.write { background: none; border: 0; padding: 0; font-size: 13px; color: var(--cream); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; white-space: nowrap }
+.track { position: relative; height: 22px; border-radius: 4px; background: var(--red-deep); cursor: default }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--cream); min-width: 0; transition: width .35s ease }
+.val { position: absolute; top: 50%; transform: translateY(-50%); font: 500 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+.val.in { color: var(--red-ink); right: 8px }
+.val.out { color: var(--cream) }
+.vote { min-width: 92px; height: 40px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--cream); background: transparent; color: var(--cream); font-weight: 800; font-size: 14px; cursor: pointer }
+.vote[aria-pressed="true"] { background: var(--cream); color: var(--red) }
+.vote:hover { background: var(--red-deep) }
+.vote[aria-pressed="true"]:hover { background: var(--cream-muted) }
+.more { justify-self: center; background: transparent; border: 0; color: var(--cream); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px }
+.empty { text-align: center; color: var(--cream-muted); padding: 24px 0 }
+.empty strong { display: block; font: 400 30px/1.1 var(--display); color: var(--cream); margin-bottom: 4px }
+.local { font-size: 13px; color: var(--cream-muted); text-align: center }
+.find { width: 100%; height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--cream-muted); background: var(--red-deep); color: var(--cream) }
+.find::placeholder { color: var(--cream-muted) }
+.tip { position: fixed; z-index: 30; pointer-events: none; background: var(--cream); color: var(--ink); padding: 8px 10px; border-radius: 6px; font-size: 13px; line-height: 1.4; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 260px }
+.tip b { display: block; font-size: 14px }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 1.6em 44px minmax(0, 1fr) auto; gap: 4px 8px }
+  .pic { width: 44px; height: 44px }
+  .vote { min-width: 0; padding: 0 10px }
+}
+
+/* Cream cards: report form + complaint kit */
+.card { background: var(--cream); color: var(--ink); border-radius: 10px; padding: 0; box-shadow: 0 10px 30px -14px rgba(0,0,0,.45) }
+details.card > summary { list-style: none; cursor: pointer; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px }
+details.card > summary::-webkit-details-marker { display: none }
+details.card > summary h2 { font-size: 32px; color: var(--red) }
+details.card > summary span { font-weight: 800; font-size: 24px; color: var(--red); line-height: 1 }
+details[open].card > summary span { transform: rotate(45deg) }
+.card-body { padding: 0 22px 22px; display: grid; gap: 14px }
+.card-body > p { margin: 0; color: var(--ink-muted); font-size: 15px }
+form { display: grid; gap: 14px }
+.two { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)) }
+@media (max-width: 520px) { .two { grid-template-columns: minmax(0, 1fr) } }
+label { display: grid; gap: 6px; font-size: 14px; font-weight: 700 }
+label small { font-weight: 400; color: var(--ink-muted) }
+input[type=text], select, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 6px; background: #FFFFFF; color: var(--ink) }
+textarea { resize: vertical; min-height: 84px; line-height: 1.45 }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 500 }
+.check input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--red) }
+.note { padding: 10px 12px; border-radius: 6px; font-size: 14px; background: #FBE3D9; color: var(--red-ink) }
+.note.ok { background: #E6F0DF; color: #2F5A22 }
+.note button { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; font-weight: 700; cursor: pointer }
+.btn { height: 46px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--red); color: var(--cream); font-weight: 800; cursor: pointer; justify-self: start; text-decoration: none; display: inline-flex; align-items: center }
+.btn:disabled { opacity: .5; cursor: not-allowed }
+.btn.line { background: transparent; color: var(--red); border: 2px solid var(--red); height: 40px; font-size: 14px }
+
+dialog { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); border: 0; padding: 0 }
+dialog::backdrop { background: rgba(60, 8, 18, .6) }
+.kit { padding: 22px; display: grid; gap: 14px }
+.kit-head { display: flex; justify-content: space-between; gap: 12px; align-items: start }
+.kit-title { display: flex; gap: 14px; align-items: center; min-width: 0 }
+.kit-title .pic { border: 1.5px solid var(--line) }
+.kit-head h2 { font: 400 34px/1 var(--display); color: var(--red) }
+.kit-head p { margin: 2px 0 0; color: var(--ink-muted); font-size: 14px }
+.x { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; cursor: pointer; font-size: 20px; line-height: 1; color: var(--ink) }
+.tones { display: flex; flex-wrap: wrap; gap: 6px }
+.tone { padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: transparent; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink) }
+.tone[aria-pressed="true"] { background: var(--red); color: var(--cream); border-color: var(--red) }
+.field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end }
+.copy { height: 44px; padding: 0 12px; border-radius: 6px; border: 1.5px solid var(--red); color: var(--red); background: transparent; font-weight: 800; cursor: pointer; font-size: 14px }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap }
+.count { font: 500 13px/1 var(--mono); color: var(--ink-muted) }
+.count.over { color: var(--red) }
+.steps { display: grid; gap: 10px; padding: 14px; border-radius: 8px; background: #FBEBD6 }
+.steps p { margin: 0; font-size: 13.5px; color: var(--ink-muted) }
+.urlbox { font: 500 12.5px/1.4 var(--mono); overflow-wrap: anywhere; user-select: all; color: var(--ink) }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--cream); padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 700; z-index: 40; max-width: calc(100vw - 32px) }
+footer { text-align: center; font-size: 13px; color: var(--cream-muted) }
+footer p { margin: 0 }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="tag">A fan-made petition board</div>
+    <h1><small>The</small>Discontinued Aisle</h1>
+    <p class="lede">Vote for the discontinued Trader Joe's products you want back, then write to Trader Joe's and tell them yourself.</p>
+    <div class="stats" aria-live="polite">
+      <span><b id="st-items">–</b> products</span>
+      <span><b id="st-people">–</b> people voting</span>
+      <span><b id="st-letters">–</b> letters sent</span>
+    </div>
+  </header>
+
+  <section class="lb" aria-labelledby="lb-title">
+    <div class="lb-head">
+      <h2 id="lb-title">Most missed</h2>
+      <div class="seg" role="group" aria-label="Leaderboard period">
+        <button type="button" data-period="all" aria-pressed="true">All time</button>
+        <button type="button" data-period="30" aria-pressed="false">Trending · 30 days</button>
+      </div>
+    </div>
+    <p class="caption" id="caption">Votes for each discontinued product, all time.</p>
+    <ol class="rows" id="rows" aria-describedby="caption">
+      <li class="empty"><strong>Stocking the shelf…</strong>The leaderboard loads here.</li>
+    </ol>
+    <button class="more" id="more" type="button" hidden>Show all</button>
+    <input class="find" id="q" type="text" placeholder="Find a product" aria-label="Find a product" hidden>
+    <p class="local" id="local-note" hidden>Not connected to the vote database, so this shows only your votes, saved in this browser.</p>
+  </section>
+
+  <details class="card" id="report-card">
+    <summary><h2>Report a missing product</h2><span aria-hidden="true">+</span></summary>
+    <div class="card-body">
+      <p>Discontinued products only. Seasonal items come back on their own, and core items never left.</p>
+      <form id="report" novalidate>
+        <label for="r-name">Product name
+          <input type="text" id="r-name" maxlength="80" placeholder="e.g. Gorgonzola Crackers" autocomplete="off">
+        </label>
+        <div id="dupe" class="note" hidden></div>
+        <div id="seasonal" class="note" hidden></div>
+        <div class="two">
+          <label for="r-cat">Category <select id="r-cat"></select></label>
+          <label for="r-seen">Last seen <small>(optional)</small>
+            <input type="text" id="r-seen" maxlength="40" placeholder="e.g. Spring 2025">
+          </label>
+        </div>
+        <label for="r-sku">SKU <small>(optional, the 6-digit number on the shelf tag)</small>
+          <input type="text" id="r-sku" maxlength="10" inputmode="numeric" placeholder="e.g. 012564">
+        </label>
+        <label for="r-note">Why it matters <small>(optional)</small>
+          <textarea id="r-note" maxlength="280" placeholder="It was the only thing that made Tuesdays bearable."></textarea>
+        </label>
+        <label class="check" for="r-ok"><input type="checkbox" id="r-ok"> It isn't seasonal, and Trader Joe's isn't still selling it.</label>
+        <div id="r-status" class="note" hidden></div>
+        <button class="btn" id="r-submit" type="submit">Add it to the board</button>
+      </form>
+    </div>
+  </details>
+
+  <footer>
+    <p>Fan-made. Not affiliated with or endorsed by Trader Joe's. Product list from press roundups; dates are approximate.</p>
+  </footer>
+</div>
+
+<dialog id="kit" class="card" aria-labelledby="kit-title">
+  <div class="kit">
+    <div class="kit-head">
+      <div class="kit-title">
+        <div id="kit-pic"></div>
+        <div>
+          <h2 id="kit-title">Write to Trader Joe's</h2>
+          <p id="kit-sub">Fill in, copy, then paste into their feedback form.</p>
+        </div>
+      </div>
+      <button class="x" id="kit-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="field">
+      <label for="k-store">Your store <small>(city or neighborhood)</small>
+        <input type="text" id="k-store" maxlength="60" placeholder="e.g. Pasadena (Arroyo)">
+      </label>
+      <button class="copy" type="button" data-copy="k-store">Copy</button>
+    </div>
+    <div class="field">
+      <label for="k-product">Product name <input type="text" id="k-product" maxlength="80"></label>
+      <button class="copy" type="button" data-copy="k-product">Copy</button>
+    </div>
+    <div class="field">
+      <label for="k-sku">SKU <small>(optional, the 6-digit number on the shelf tag)</small> <small id="k-sku-note"></small>
+        <input type="text" id="k-sku" maxlength="20" placeholder="Leave blank if you don't have it">
+      </label>
+      <button class="copy" type="button" data-copy="k-sku">Copy</button>
+    </div>
+    <div style="display:grid;gap:8px">
+      <span style="font-size:14px;font-weight:700">Tone</span>
+      <div class="tones" id="tones" role="group" aria-label="Message tone"></div>
+    </div>
+    <div class="field">
+      <label for="k-msg">Your message <textarea id="k-msg" rows="7"></textarea></label>
+      <button class="copy" type="button" data-copy="k-msg">Copy</button>
+    </div>
+    <div class="foot">
+      <button class="btn line" id="k-reroll" type="button">New P.S. line</button>
+      <span class="count" id="k-count">0 / 700</span>
+    </div>
+    <div class="steps">
+      <a class="btn" href="https://www.traderjoes.com/home/contact-us/discontinued-products" target="_blank" rel="noopener">Open the feedback form ↗</a>
+      <p>If that link doesn't open the form, go to Trader Joe's Contact Us page and choose discontinued product feedback:</p>
+      <div class="urlbox">https://www.traderjoes.com/home/contact-us</div>
+      <button class="btn line" id="k-sent" type="button">I sent it</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="firebase-config.js"></script>
+<script>
+(() => {
+  const CATS = ["Snacks & crackers", "Frozen", "Refrigerated & dips", "Pantry & sauces", "Bakery & bread", "Sweets & desserts", "Dairy & cheese", "Drinks", "Prepared meals", "Household & beauty", "Other"];
+  const SEASONAL = ["pumpkin", "peppermint", "gingerbread", "holiday", "christmas", "xmas", "halloween", "eggnog", "egg nog", "candy cane", "harvest", "autumn", "fall ", "winter", "spring", "summer", "valentine", "easter", "cider", "cranberry", "turkey", "stuffing", "panettone", "advent", "hanukkah", "snowman", "jingle", "maple"];
+  const MAX_SUBS = 10, LIMIT = 700, TOP = 10, DAY = 864e5;
+  // The product list. To add or remove a curated product, edit this list and commit.
+  // Fan-reported products are stored in the database (submissions collection).
+  const AOL = ["Mashed (via AOL)", "https://www.aol.com/articles/17-discontinued-trader-joes-items-173300853.html"];
+  const TT_FROZEN = ["Tasting Table", "https://www.tastingtable.com/2059465/discontinued-trader-joes-frozen-foods-shoppers-miss"];
+  const TT_2026 = ["Tasting Table", "https://www.tastingtable.com/2266170/trader-joes-discontinued-2026/"];
+  const CHOW = ["Chowhound", "https://www.chowhound.com/2280180/trader-joes-items-discontinued-2026-so-far/"];
+  // Each product shows, in order of preference: a photo listed in IMAGES, its own drawing
+  // in ICONS, or its category's drawing in CAT_ICONS.
+  // Photos are optional; list one by product id, e.g. "gorgonzola-crackers": "images/gorgonzola-crackers.jpg".
+  const IMAGES = {
+  };
+  const imgMissing = new Set();
+  // Hand-drawn product illustrations (64×64, red line art, soft fill accents).
+  const A = 'fill="#F2C7BD"';   // soft accent fill
+  const D = 'fill="#7E0F22"';   // dark accent fill
+  const ICONS = {
+    "belgian-chocolate-pudding": `
+      <path d="M17 30 L21 54 H43 L47 30" ${A}/>
+      <path d="M14 30 H50"/>
+      <path d="M17 30 Q20 21 27 22 Q32 16 38 21 Q45 21 47 30 Z" ${D}/>
+      <path d="M38 8 L33 24"/><ellipse cx="39.5" cy="7" rx="3" ry="2" transform="rotate(20 39.5 7)"/>
+      <path d="M22 38 H42"/>`,
+    "pretzel-breadsticks": `
+      <g transform="rotate(-14 32 32)"><rect x="17" y="8" width="7" height="48" rx="3.5" ${A}/><path d="M17 16 l7 -4 M17 24 l7 -4 M17 32 l7 -4 M17 40 l7 -4 M17 48 l7 -4"/></g>
+      <g transform="rotate(4 32 32)"><rect x="29" y="6" width="7" height="50" rx="3.5" ${A}/><path d="M29 14 l7 -4 M29 22 l7 -4 M29 30 l7 -4 M29 38 l7 -4 M29 46 l7 -4"/></g>
+      <g transform="rotate(18 32 32)"><rect x="41" y="10" width="7" height="46" rx="3.5" ${A}/><path d="M41 18 l7 -4 M41 26 l7 -4 M41 34 l7 -4 M41 42 l7 -4"/></g>`,
+    "gorgonzola-crackers": `
+      <rect x="9" y="17" width="27" height="27" rx="3" transform="rotate(-10 22 30)" ${A}/>
+      <rect x="27" y="24" width="27" height="27" rx="3" transform="rotate(8 40 37)" ${A}/>
+      <g fill="currentColor" stroke="none"><circle cx="17" cy="26" r="1.6"/><circle cx="26" cy="24" r="1.6"/><circle cx="19" cy="35" r="1.6"/><circle cx="28" cy="33" r="1.6"/>
+      <circle cx="35" cy="32" r="1.6"/><circle cx="45" cy="33" r="1.6"/><circle cx="34" cy="42" r="1.6"/><circle cx="44" cy="44" r="1.6"/></g>`,
+    "arrabiata-sauce": `
+      <rect x="22" y="8" width="20" height="8" rx="2" ${D}/>
+      <path d="M24 16 H40 Q47 20 47 28 V50 Q47 56 41 56 H23 Q17 56 17 50 V28 Q17 20 24 16 Z" ${A}/>
+      <path d="M17 30 H47 M17 46 H47"/>
+      <path d="M25 41 Q31 33 40 37 Q35 44 25 41 Z" fill="currentColor"/><path d="M40 37 Q42 34 44 35"/>`,
+    "cioppino-seafood-stew": `
+      <path d="M8 31 H56 Q54 52 32 53 Q10 52 8 31 Z" ${A}/>
+      <path d="M14 31 Q20 25 26 29 Q31 24 37 29 Q43 24 50 31" ${D}/>
+      <path d="M24 26 Q22 18 29 17 Q35 17 33 23" />
+      <path d="M40 24 Q44 18 48 22 Q47 27 42 27 Z"/>
+      <path d="M22 13 q-3 -4 0 -7 M32 11 q-3 -4 0 -7 M42 13 q-3 -4 0 -7"/>`,
+    "pulled-bbq-chicken": `
+      <path d="M11 30 Q12 14 32 14 Q52 14 53 30 Z" ${A}/>
+      <g fill="currentColor" stroke="none"><ellipse cx="25" cy="21" rx="1.6" ry="1"/><ellipse cx="33" cy="19" rx="1.6" ry="1"/><ellipse cx="41" cy="22" rx="1.6" ry="1"/></g>
+      <path d="M9 34 Q13 30 17 34 Q21 38 25 34 Q29 30 33 34 Q37 38 41 34 Q45 30 49 34 Q53 38 55 34" ${D}/>
+      <rect x="11" y="39" width="42" height="10" rx="5" ${A}/>`,
+    "piquant-popcorn": `
+      <path d="M17 26 L22 56 H42 L47 26 Z" ${A}/>
+      <path d="M25 26 L28 56 M32 26 V56 M39 26 L36 56"/>
+      <g ${A}><circle cx="21" cy="22" r="5.5"/><circle cx="30" cy="17" r="6"/><circle cx="40" cy="19" r="5.5"/><circle cx="45" cy="25" r="4.5"/><circle cx="34" cy="10" r="4.5"/></g>
+      <path d="M50 10 l3 -3 M52 15 h4 M47 6 l1 -4"/>`,
+    "almond-chipotle-dip": `
+      <path d="M12 22 L16 50 Q32 57 48 50 L52 22" ${A}/>
+      <ellipse cx="32" cy="22" rx="20" ry="6" ${D}/>
+      <path d="M32 31 Q40 38 32 49 Q24 38 32 31 Z" fill="#FFFFFF"/><path d="M32 35 V45"/>`,
+    "dairy-free-cheddar-slices": `
+      <rect x="20" y="10" width="32" height="32" rx="2" ${A}/>
+      <rect x="15" y="16" width="32" height="32" rx="2" ${A}/>
+      <path d="M10 22 H42 V44 L32 54 H10 Z" fill="#FFFFFF"/><path d="M42 44 L32 44 L32 54"/>
+      <g fill="currentColor" stroke="none"><circle cx="18" cy="30" r="2"/><circle cx="29" cy="36" r="1.5"/><circle cx="20" cy="44" r="1.4"/></g>`,
+    "mahi-mahi-burgers": `
+      <path d="M8 28 Q24 10 44 28 Q24 46 8 28 Z" ${A}/>
+      <path d="M44 28 L56 19 L54 28 L56 37 Z" ${A}/>
+      <circle cx="16" cy="25" r="1.8" fill="currentColor" stroke="none"/>
+      <path d="M22 20 Q26 28 22 36"/>
+      <rect x="12" y="44" width="40" height="10" rx="5" ${D}/>`
+  };
+  // Category illustrations, used for products that don't have their own drawing yet.
+  const CAT_ICONS = {
+    "Snacks & crackers": `
+      <path d="M16 12 H48 L45 32 L48 52 H16 L19 32 Z" ${A}/>
+      <path d="M16 12 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 M16 52 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3"/>
+      <path d="M24 38 Q32 22 41 34 Q33 44 24 38 Z" fill="#FFFFFF"/>`,
+    "Frozen": `
+      <rect x="12" y="14" width="40" height="38" rx="3" ${A}/>
+      <path d="M12 22 H52"/>
+      <path d="M32 28 V46 M24 32 L40 42 M40 32 L24 42 M29 28 l3 3 l3 -3 M29 46 l3 -3 l3 3"/>`,
+    "Refrigerated & dips": `
+      <path d="M12 30 L16 52 Q32 58 48 52 L52 30" ${A}/>
+      <ellipse cx="32" cy="30" rx="20" ry="6" ${D}/>
+      <path d="M30 31 L40 8 L50 24 Z" fill="#FFFFFF"/>
+      <g fill="currentColor" stroke="none"><circle cx="40" cy="17" r="1.3"/><circle cx="44" cy="22" r="1.3"/></g>`,
+    "Pantry & sauces": `
+      <path d="M16 14 V50 Q32 56 48 50 V14" ${A}/>
+      <ellipse cx="32" cy="14" rx="16" ry="5" fill="#FFFFFF"/>
+      <path d="M16 24 Q32 30 48 24 M16 42 Q32 48 48 42"/>
+      <circle cx="32" cy="34" r="4" ${D}/>`,
+    "Bakery & bread": `
+      <path d="M10 44 V30 Q10 16 32 16 Q54 16 54 30 V44 Q54 50 48 50 H16 Q10 50 10 44 Z" ${A}/>
+      <path d="M20 22 L26 30 M30 20 L36 28 M40 21 L45 28"/>`,
+    "Sweets & desserts": `
+      <path d="M52 30 A21 21 0 1 1 38 12 Q36 18 42 20 Q44 27 52 30 Z" ${A}/>
+      <g ${D} stroke="none"><circle cx="24" cy="26" r="2.6"/><circle cx="33" cy="38" r="2.6"/><circle cx="22" cy="42" r="2.4"/><circle cx="40" cy="30" r="2.2"/><circle cx="31" cy="24" r="1.8"/></g>`,
+    "Dairy & cheese": `
+      <path d="M8 42 L52 22 L56 28 V48 H8 Z" ${A}/>
+      <path d="M8 42 H56"/>
+      <g fill="#FFFFFF"><circle cx="22" cy="45" r="2"/><circle cx="38" cy="33" r="3"/><circle cx="46" cy="44" r="2.5"/></g>`,
+    "Drinks": `
+      <path d="M27 8 H37 V18 Q46 22 46 32 V52 Q46 56 42 56 H22 Q18 56 18 52 V32 Q18 22 27 18 Z" ${A}/>
+      <rect x="26" y="5" width="12" height="5" rx="1.5" ${D}/>
+      <path d="M18 34 H46 M18 46 H46"/>`,
+    "Prepared meals": `
+      <rect x="8" y="22" width="48" height="28" rx="4" ${A}/>
+      <path d="M28 22 V50 M28 36 H56"/>
+      <path d="M14 30 Q18 26 22 30 M14 38 Q18 34 22 38 M14 44 h8"/>
+      <g ${D}><circle cx="36" cy="29" r="2.5"/><circle cx="44" cy="28" r="2.5"/></g>
+      <path d="M34 42 h16"/>`,
+    "Household & beauty": `
+      <rect x="12" y="28" width="40" height="22" rx="8" ${A}/>
+      <path d="M20 38 h24"/>
+      <g fill="#FFFFFF"><circle cx="22" cy="18" r="5"/><circle cx="34" cy="14" r="3.5"/><circle cx="43" cy="20" r="4"/></g>`,
+    "Other": `
+      <path d="M14 22 H50 L47 56 H17 Z" ${A}/>
+      <path d="M24 22 V16 Q24 10 32 10 Q40 10 40 16 V22"/>
+      <path d="M21 30 l-2 -2 M43 30 l2 -2"/>
+      <path d="M27 40 Q32 34 37 40 Q32 46 27 40 Z" ${D}/>`
+  };
+  function art(p) {
+    const svg = ICONS[p.id] || CAT_ICONS[p.category] || CAT_ICONS.Other;
+    return `<svg class="ill" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>`;
+  }
+  function picHTML(p, big) {
+    const srcs = IMAGES[p.id] ? [IMAGES[p.id]] : [];
+    const src = srcs.find(u => !imgMissing.has(u));
+    return `<div class="pic${big ? " big" : ""}" aria-hidden="true">${art(p)}${src ? `<img src="${esc(src)}" alt="" loading="lazy" data-srcs="${esc(srcs.join(" "))}">` : ""}</div>`;
+  }
+  // Walk to the next candidate file when one is missing; drop the <img> when none exist.
+  document.addEventListener("error", e => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.dataset.srcs) return;
+    imgMissing.add(img.getAttribute("src"));
+    const next = img.dataset.srcs.split(" ").find(u => !imgMissing.has(u));
+    if (next) img.src = next; else img.remove();
+  }, true);
+
+  const STARTER = [
+    ["belgian-chocolate-pudding", "Belgian Chocolate Pudding", "Sweets & desserts", "", "Fans started a petition, and it tops Reddit threads about what people miss most.", AOL],
+    ["pretzel-breadsticks", "Pretzel Breadsticks", "Snacks & crackers", "Early 2025", "Pulled in early 2025. Fans took to Reddit, Instagram and Facebook about it.", AOL],
+    ["gorgonzola-crackers", "Gorgonzola Crackers", "Snacks & crackers", "", "One superfan called them \"perfection\" with the tomato bisque.", AOL],
+    ["arrabiata-sauce", "Arrabiata Sauce", "Pantry & sauces", "", "Reportedly dropped after Trader Joe's lost its supplier.", ["Refinery29", "https://refinery29.com/en-us/trader-joes-discontinued-products"]],
+    ["cioppino-seafood-stew", "Cioppino Seafood Stew", "Frozen", "", "A frozen seafood stew shoppers still bring up years later.", TT_FROZEN],
+    ["pulled-bbq-chicken", "Pulled BBQ Chicken", "Refrigerated & dips", "2026", "One of 2026's losses. Reports say it isn't coming back, at least for now.", CHOW],
+    ["piquant-popcorn", "Piquant Popcorn", "Snacks & crackers", "2026", "Pulled from shelves in 2026.", ["The Takeout", "https://www.thetakeout.com/2276000/trader-joes-finds-discontinued-2026-so-far/"]],
+    ["almond-chipotle-dip", "Almond Chipotle Dip", "Refrigerated & dips", "Summer 2026", "Reportedly axed around summer 2026.", TT_2026],
+    ["dairy-free-cheddar-slices", "Dairy Free Cheddar Style Slices", "Dairy & cheese", "August 2026", "Reportedly discontinued around August 2026, leaving dairy-free shoppers short a sandwich staple.", TT_2026],
+    ["mahi-mahi-burgers", "Mahi Mahi Burgers", "Frozen", "2026", "Gone for the second time. A store told one shopper they were discontinued, no reason given.", TT_2026],
+  ].map(([id, name, category, lastSeen, blurb, [sourceName, sourceUrl]]) => ({ id, name, category, lastSeen, blurb, sourceName, sourceUrl, createdAt: "2026-10-26T00:00:00Z" }));
+  const LOCAL_KEY = "missing-aisle-local";
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const norm = s => String(s || "").toLowerCase().replace(/trader joe'?s|tj'?s/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const store = {
+    get(k) { try { return localStorage.getItem(k) } catch { return null } },
+    set(k, v) { try { localStorage.setItem(k, v) } catch {} }
+  };
+  const cleanSku = v => { const d = String(v || "").replace(/\D/g, ""); return /^\d{6}$/.test(d) ? d : "" };
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+  const S = {
+    db: null, uid: null, readOnly: false, ready: false, local: false,
+    seed: new Map(), subs: new Map(), votes: new Map(), hidden: {},
+    my: { picks: {}, sent: {}, skus: {} }, mySubs: [],
+    period: "all", showAll: false
+  };
+
+  $("#r-cat").innerHTML = CATS.map(c => `<option>${esc(c)}</option>`).join("");
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true }, 3200);
+  }
+
+  // ---------- Data ----------
+  function allProducts() {
+    const list = [...S.seed.values()];
+    for (const items of S.subs.values()) for (const it of items) list.push({ ...it, fan: true });
+    return list.filter(p => !S.hidden[p.id]);
+  }
+  // A vote is stored as the time it was cast. Older votes stored as `true` count toward all time only.
+  function tallies() {
+    const cutoff = Date.now() - 30 * DAY;
+    const all = {}, recent = {}, sent = {}; let people = 0, letters = 0;
+    for (const v of S.votes.values()) {
+      const picks = v.picks || {};
+      let any = false;
+      for (const [id, at] of Object.entries(picks)) {
+        if (!at) continue;
+        any = true;
+        all[id] = (all[id] || 0) + 1;
+        if (typeof at === "string" && Date.parse(at) >= cutoff) recent[id] = (recent[id] || 0) + 1;
+      }
+      if (any) people++;
+      for (const [id, at] of Object.entries(v.sent || {})) if (at) { sent[id] = (sent[id] || 0) + 1; letters++ }
+    }
+    return { all, recent, sent, people, letters };
+  }
+
+  // The SKU fans report most often for a product, unless the product already has one.
+  function skuFor(p) {
+    if (p.sku) return { sku: p.sku, fans: 0 };
+    const c = {};
+    for (const v of S.votes.values()) { const k = cleanSku((v.skus || {})[p.id]); if (k) c[k] = (c[k] || 0) + 1 }
+    const best = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+    return best ? { sku: best[0], fans: best[1] } : null;
+  }
+
+  // ---------- Render ----------
+  function render() {
+    const t = tallies();
+    const products = allProducts();
+    $("#st-items").textContent = S.ready ? products.length : "–";
+    $("#st-people").textContent = S.ready ? t.people : "–";
+    $("#st-letters").textContent = S.ready ? t.letters : "–";
+    $("#local-note").hidden = !S.local;
+    if (!S.ready) return;
+
+    const counts = S.period === "all" ? t.all : t.recent;
+    $("#caption").textContent = S.period === "all"
+      ? "Votes for each discontinued product, all time."
+      : "Votes cast in the last 30 days.";
+
+    const rows = $("#rows");
+    if (!products.length) {
+      rows.innerHTML = `<li class="empty"><strong>The shelf is empty.</strong>Report the first missing product below.</li>`;
+      $("#more").hidden = $("#q").hidden = true;
+      return;
+    }
+    const ranked = [...products].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0) || (t.all[b.id] || 0) - (t.all[a.id] || 0) || a.name.localeCompare(b.name));
+    const max = Math.max(1, ...ranked.map(p => counts[p.id] || 0));
+    const q = norm($("#q").value);
+    let shown = ranked.map((p, i) => ({ p, rank: i + 1 }));
+    if (S.showAll && q) shown = shown.filter(({ p }) => norm(p.name).includes(q));
+    if (!S.showAll) shown = shown.slice(0, TOP);
+
+    const quiet = S.period === "30" && !Object.keys(t.recent).length;
+    rows.innerHTML = (quiet ? `<li class="empty" style="padding:4px 0 8px">No votes in the last 30 days yet. Be the first.</li>` : "") +
+      (shown.length ? shown.map(({ p, rank }) => {
+        const n = counts[p.id] || 0, mine = !!S.my.picks[p.id];
+        const pct = (n / max) * 100;
+        const inside = pct >= 22;
+        const sk = skuFor(p);
+        const meta = [p.lastSeen && `Last seen ${p.lastSeen}`, sk && `SKU ${sk.sku}`, p.fan && "Fan-reported"].filter(Boolean).join(" · ");
+        return `<li class="row">
+          <span class="rk">${rank}</span>
+          ${picHTML(p)}
+          <div class="mid">
+            <div class="name"><strong>${esc(p.name)}</strong>${meta ? `<span class="meta">${esc(meta)}</span>` : ""}<button class="write" type="button" data-kit="${esc(p.id)}">Write to TJ's</button></div>
+            <div class="track" data-tip="${esc(p.id)}" role="img" aria-label="${esc(p.name)}: ${plural(n, "vote")}">
+              <div class="fill" style="width:${pct}%"></div>
+              <span class="val ${inside ? "in" : "out"}" style="${inside ? "" : `left:calc(${pct}% + 8px)`}">${n}</span>
+            </div>
+          </div>
+          <button class="vote" type="button" data-vote="${esc(p.id)}" aria-pressed="${mine}" aria-label="${mine ? "Remove your vote for" : "Vote for"} ${esc(p.name)}">${mine ? "Voted ✓" : "I miss it"}</button>
+        </li>`;
+      }).join("") : `<li class="empty">No product matches that.</li>`);
+
+    const more = $("#more");
+    more.hidden = ranked.length <= TOP;
+    more.textContent = S.showAll ? "Show top 10" : `Show all ${ranked.length}`;
+    $("#q").hidden = !S.showAll;
+  }
+
+  document.querySelectorAll("[data-period]").forEach(b => b.addEventListener("click", () => {
+    S.period = b.dataset.period;
+    document.querySelectorAll("[data-period]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    render();
+  }));
+  $("#more").addEventListener("click", () => { S.showAll = !S.showAll; if (!S.showAll) $("#q").value = ""; render() });
+  $("#q").addEventListener("input", render);
+
+  // Hover tooltip on bars
+  const tip = $("#tip");
+  $("#rows").addEventListener("mousemove", e => {
+    const tr = e.target.closest("[data-tip]");
+    if (!tr) { tip.hidden = true; return }
+    const p = allProducts().find(x => x.id === tr.dataset.tip); if (!p) return;
+    const t = tallies();
+    tip.innerHTML = `<b>${esc(p.name)}</b>${plural(t.all[p.id] || 0, "vote")} all time<br>${t.recent[p.id] || 0} in the last 30 days<br>${plural(t.sent[p.id] || 0, "letter")} sent${p.blurb ? `<br><span style="color:var(--ink-muted)">${esc(p.blurb)}</span>` : ""}`;
+    tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(window.innerWidth - w - 12, e.clientX + 14) + "px";
+    tip.style.top = Math.max(12, e.clientY - h - 12) + "px";
+  });
+  $("#rows").addEventListener("mouseleave", () => { tip.hidden = true });
+
+  // ---------- Writes ----------
+  let chain = Promise.resolve();
+  const queue = fn => (chain = chain.then(fn, fn));
+  const canWrite = () => S.local || (S.db && S.uid && !S.readOnly);
+  function cantWrite() {
+    toast("Voting isn't available right now. Try reloading the page.");
+  }
+  function saveLocal() {
+    S.votes = new Map([["me", S.my]]);
+    S.subs = new Map(S.mySubs.length ? [["me", S.mySubs]] : []);
+    store.set(LOCAL_KEY, JSON.stringify({ picks: S.my.picks, sent: S.my.sent, skus: S.my.skus, items: S.mySubs }));
+  }
+  async function saveMine() {
+    if (S.local) return saveLocal();
+    const body = { picks: S.my.picks, sent: S.my.sent, skus: S.my.skus, updatedAt: new Date().toISOString() };
+    return queue(() => S.db.doc("votes/" + S.uid).set(body));
+  }
+  async function toggleVote(id) {
+    if (!canWrite()) return cantWrite();
+    const prev = { ...S.my.picks };
+    if (S.my.picks[id]) delete S.my.picks[id]; else S.my.picks[id] = new Date().toISOString();
+    if (S.local) saveLocal();
+    render();
+    try { await saveMine() } catch (e) {
+      S.my.picks = prev; render();
+      if (e && e.code === "invalid_argument") { S.readOnly = true; cantWrite() } else toast("Your vote didn't save. Try again in a moment.");
+    }
+  }
+  async function markSent(id) {
+    if (!id) return toast("Thanks for writing in.");
+    if (!canWrite()) return toast("Thanks for writing in.");
+    S.my.sent[id] = new Date().toISOString();
+    const sku = cleanSku($("#k-sku").value), p = allProducts().find(x => x.id === id);
+    if (sku && !(p && p.sku)) S.my.skus[id] = sku;
+    render();
+    try { await saveMine(); render(); toast("Counted. Thanks for writing in.") } catch { delete S.my.sent[id]; render(); toast("Couldn't add it to the count, but your letter still went to Trader Joe's.") }
+  }
+
+  $("#rows").addEventListener("click", e => {
+    const v = e.target.closest("[data-vote]"); if (v) return toggleVote(v.dataset.vote);
+    const k = e.target.closest("[data-kit]"); if (k) return openKit(allProducts().find(p => p.id === k.dataset.kit));
+  });
+
+  // ---------- Report form ----------
+  function findDupe(name) {
+    const n = norm(name); if (n.length < 3) return null;
+    const list = allProducts();
+    const exact = list.find(p => norm(p.name) === n);
+    if (exact) return { exact: true, p: exact };
+    const near = list.find(p => { const m = norm(p.name); return m.length > 3 && (m.includes(n) || n.includes(m)) });
+    return near ? { exact: false, p: near } : null;
+  }
+  function checkName() {
+    const name = $("#r-name").value;
+    const d = findDupe(name), dupe = $("#dupe");
+    dupe.hidden = !d;
+    if (d) dupe.innerHTML = `${d.exact ? "Already on the board:" : "Is it this one?"} <b>${esc(d.p.name)}</b>. <button type="button" data-jump="${esc(d.p.id)}">Vote for it instead</button>`;
+    const hit = SEASONAL.find(w => (" " + name.toLowerCase() + " ").includes(w));
+    $("#seasonal").hidden = !hit;
+    if (hit) $("#seasonal").textContent = `"${hit.trim()}" sounds seasonal. Seasonal items usually return next year, so only add it if Trader Joe's dropped it for good.`;
+  }
+  $("#r-name").addEventListener("input", checkName);
+  $("#dupe").addEventListener("click", e => {
+    const b = e.target.closest("[data-jump]"); if (!b) return;
+    S.showAll = true; $("#q").value = ""; render();
+    const btn = document.querySelector(`[data-vote="${CSS.escape(b.dataset.jump)}"]`);
+    if (btn) { btn.scrollIntoView({ behavior: "smooth", block: "center" }); btn.focus({ preventScroll: true }) }
+  });
+  function status(msg, ok) { const s = $("#r-status"); s.hidden = !msg; s.textContent = msg || ""; s.classList.toggle("ok", !!ok) }
+
+  $("#report").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!canWrite()) { status("Adding products isn't available right now. Try reloading the page."); return }
+    const name = $("#r-name").value.trim();
+    if (name.length < 3) { status("Give the product's name, at least 3 characters."); $("#r-name").focus(); return }
+    const d = findDupe(name);
+    if (d && d.exact) { status(`${d.p.name} is already on the board. Vote for it instead.`); return }
+    if (!$("#r-ok").checked) { status("Tick the box to confirm it isn't seasonal and isn't still sold."); $("#r-ok").focus(); return }
+    if ($("#r-sku").value.trim() && !cleanSku($("#r-sku").value)) { status("A Trader Joe's SKU is 6 digits. Fix it or leave it blank."); $("#r-sku").focus(); return }
+    if (S.mySubs.length >= MAX_SUBS) { status(`You've added ${MAX_SUBS} products, the most one person can add.`); return }
+    const now = new Date().toISOString();
+    const item = {
+      id: "u-" + (S.uid || "local").replace(/[^A-Za-z0-9]/g, "").slice(-8) + "-" + Math.random().toString(36).slice(2, 8),
+      name, category: $("#r-cat").value, lastSeen: $("#r-seen").value.trim(), blurb: $("#r-note").value.trim(), sku: cleanSku($("#r-sku").value), createdAt: now
+    };
+    const items = [...S.mySubs, item];
+    $("#r-submit").disabled = true;
+    try {
+      if (S.local) S.mySubs = items;
+      else await queue(() => S.db.doc("submissions/" + S.uid).set({ items }));
+      S.my.picks[item.id] = now; await saveMine().catch(() => {}); render();
+      $("#report").reset(); checkName();
+      status(`Added ${name}, with your vote on it.`, true);
+    } catch (err) {
+      if (err && err.code === "invalid_argument") { S.readOnly = true; status("That didn't save. Try reloading the page.") }
+      else if (err && err.code === "quota_exceeded") status("The board is full right now. Try again later.");
+      else status("That didn't save. Try again in a moment.");
+    } finally { $("#r-submit").disabled = false }
+  });
+
+  // ---------- Complaint kit ----------
+  const TONES = {
+    "Polite regular": p => `Hi Trader Joe's team! I shop at ${p.s} and I really miss ${p.n}. It was a regular in my cart, and nothing on the shelf has replaced it. I would buy it every week if it came back. Thank you for listening, and thanks to the crew members who have patiently answered me every time I asked about it.`,
+    "Five stages of grief": p => `Denial: I checked behind the shelf tag for ${p.n} three times at ${p.s}. Anger: I said a word near the freezers that I won't repeat. Bargaining: I'd give up the free stickers for life. Depression: my cart feels empty even when it's full. Acceptance: no. I refuse. Please bring back ${p.n}.`,
+    "Breakup letter": p => `Dear Trader Joe's, we need to talk. Things were good. Great, even. Then one day at ${p.s}, ${p.n} was just gone. No note. No goodbye. I'm not saying it's you, but it's definitely not me. I'm willing to work on this if you are. Bring back ${p.n} and we can pretend this never happened. Still yours (for now).`,
+    "Ransom note": p => `WE HAVE YOUR CUSTOMER. Okay, it's me. I am the customer. I shop at ${p.s} and I'll keep coming back, but my happiness is being held until ${p.n} returns to the shelf. No substitutes. No "new and improved." Just ${p.n}, exactly as it was. You have until my next grocery run.`,
+    "Nature documentary": p => `Here at ${p.s}, we observe a shopper in its natural habitat. It approaches the shelf where ${p.n} once lived. It pauses. It checks the endcap. It asks a crew member, who gently delivers the news. The shopper does not recover. With your help, this species can thrive again. Please bring back ${p.n}.`,
+    "Shakespearean": p => `O ${p.n}, wherefore art thou? Thou wert the jewel of ${p.s}, the fairest thing in all my cart. Now thy shelf stands bare, and I wander the aisles like a ghost in a Hawaiian shirt. Return, sweet ${p.n}, I beseech thee, ere I lose all reason and buy something seasonal by mistake.`
+  };
+  const PS = [
+    "P.S. I would buy it in bulk. Embarrassing bulk.",
+    "P.S. My freezer has a spot saved for it. It's been waiting.",
+    "P.S. I've told everyone I know. They miss it too now.",
+    "P.S. I'd even brave the Saturday-afternoon parking lot for it.",
+    "P.S. Whoever decided to stop selling it: I forgive you, if you fix it.",
+    "P.S. This message was approved by my entire household.",
+    "P.S. I still have the empty package. I'm not proud of that."
+  ];
+  const kit = { product: null, tone: "Polite regular", ps: 0, dirty: false };
+  const tonesEl = $("#tones");
+  tonesEl.innerHTML = Object.keys(TONES).map(t => `<button type="button" class="tone" data-tone="${esc(t)}" aria-pressed="false">${esc(t)}</button>`).join("");
+
+  function compose() {
+    const n = $("#k-product").value.trim() || "this product";
+    const st = $("#k-store").value.trim();
+    const s = st ? `your ${st} store` : "my local store";
+    let msg = TONES[kit.tone]({ n, s });
+    const withPs = msg + "\n\n" + PS[kit.ps % PS.length];
+    if (withPs.length <= LIMIT) msg = withPs;
+    $("#k-msg").value = msg.slice(0, LIMIT);
+    kit.dirty = false; count();
+  }
+  function count() {
+    const len = $("#k-msg").value.length, c = $("#k-count");
+    c.textContent = `${len} / ${LIMIT}`; c.classList.toggle("over", len > LIMIT);
+  }
+  function syncTones() { tonesEl.querySelectorAll(".tone").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tone === kit.tone))) }
+  function openKit(p) {
+    kit.product = p || null; kit.ps = Math.floor(Math.random() * PS.length);
+    $("#k-product").value = p ? p.name : "";
+    const sk = p && skuFor(p);
+    $("#k-sku").value = sk ? sk.sku : "";
+    $("#k-sku-note").textContent = sk && sk.fans ? `Reported by ${plural(sk.fans, "fan")}. Double-check it if you can.` : "If you know it, it'll be saved for everyone when you press I sent it.";
+    $("#k-store").value = store.get("tj-store") || "";
+    $("#kit-pic").innerHTML = p ? picHTML(p, true) : "";
+    $("#kit-sub").textContent = p ? `About ${p.name}. Fill in, copy, then paste into their feedback form.` : "Fill in, copy, then paste into their feedback form.";
+    $("#k-sent").hidden = !p;
+    syncTones(); compose();
+    const dlg = $("#kit");
+    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+    $("#k-store").focus();
+  }
+  function closeKit() { const d = $("#kit"); if (d.close) d.close(); else d.removeAttribute("open") }
+
+  tonesEl.addEventListener("click", e => {
+    const b = e.target.closest("[data-tone]"); if (!b) return;
+    kit.tone = b.dataset.tone; syncTones(); compose();
+  });
+  $("#k-reroll").addEventListener("click", () => { kit.ps++; compose() });
+  $("#k-store").addEventListener("input", () => { store.set("tj-store", $("#k-store").value.trim()); if (!kit.dirty) compose() });
+  $("#k-product").addEventListener("input", () => { if (!kit.dirty) compose() });
+  $("#k-msg").addEventListener("input", () => { kit.dirty = true; count() });
+  $("#kit-close").addEventListener("click", closeKit);
+  $("#kit").addEventListener("click", e => { if (e.target === e.currentTarget) closeKit() });
+  $("#k-sent").addEventListener("click", () => { markSent(kit.product && kit.product.id); closeKit() });
+
+  document.querySelectorAll("[data-copy]").forEach(btn => btn.addEventListener("click", () => {
+    const el = document.getElementById(btn.dataset.copy);
+    const val = el.value;
+    if (!val) { toast("That field is empty."); return }
+    const done = () => { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy" }, 1400) };
+    const fallback = () => { el.focus(); el.select(); toast("Selected. Press Ctrl+C or ⌘C to copy.") };
+    try { navigator.clipboard.writeText(val).then(done, fallback) } catch { fallback() }
+  }));
+
+  // ---------- Boot ----------
+  // Connects to Firebase when firebase-config.js is filled in. Each visitor gets an anonymous ID.
+  const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
+  async function connect() {
+    const cfg = window.FIREBASE_CONFIG;
+    if (!cfg || !cfg.apiKey) return null;
+    const [{ initializeApp }, fs, au] = await Promise.all([
+      import(FB + "firebase-app.js"), import(FB + "firebase-firestore.js"), import(FB + "firebase-auth.js")
+    ]);
+    const app = initializeApp(cfg);
+    const fdb = fs.getFirestore(app);
+    const { user } = await au.signInAnonymously(au.getAuth(app));
+    const wrap = d => ({ id: d.id, exists: d.exists(), data: () => d.data() });
+    const denied = e => { throw (e && e.code === "permission-denied" ? { code: "invalid_argument" } : e) };
+    return {
+      uid: user.uid,
+      db: {
+        collection: p => ({ onSnapshot: (next, err) => fs.onSnapshot(fs.collection(fdb, p), s => next({ docs: s.docs.map(wrap) }), err) }),
+        doc: p => ({
+          onSnapshot: (next, err) => fs.onSnapshot(fs.doc(fdb, p), d => next(wrap(d)), err),
+          set: body => fs.setDoc(fs.doc(fdb, p), body).catch(denied)
+        })
+      }
+    };
+  }
+
+  async function boot() {
+    let conn = null;
+    try { conn = await connect() } catch (e) { console.error("Couldn't connect to Firebase:", e) }
+    const db = conn && conn.db;
+    S.db = db; S.uid = conn && conn.uid;
+    S.seed = new Map(STARTER.map(p => [p.id, p]));
+    if (!db) {
+      // Standalone: show the built-in starting list and keep votes in this browser.
+      S.local = true;
+      let saved = {};
+      try { saved = JSON.parse(store.get(LOCAL_KEY) || "{}") || {} } catch {}
+      S.my = { picks: saved.picks || {}, sent: saved.sent || {}, skus: saved.skus || {} };
+      S.mySubs = Array.isArray(saved.items) ? saved.items.filter(x => x && x.id && x.name) : [];
+      saveLocal();
+      S.ready = true; render(); return;
+    }
+
+    let pending = 3;
+    const arrived = () => { if (pending > 0 && --pending === 0) S.ready = true; render() };
+    const onErr = () => { S.ready = true; render() };
+    db.collection("submissions").onSnapshot(snap => {
+      S.subs = new Map(snap.docs.map(d => [d.id, Array.isArray(d.data().items) ? d.data().items.filter(x => x && x.id && x.name) : []]));
+      S.mySubs = (S.uid && S.subs.get(S.uid)) || []; arrived();
+    }, onErr);
+    db.collection("votes").onSnapshot(snap => {
+      S.votes = new Map(snap.docs.map(d => [d.id, d.data()]));
+      const mine = S.uid && S.votes.get(S.uid);
+      if (mine) S.my = { picks: { ...(mine.picks || {}) }, sent: { ...(mine.sent || {}) }, skus: { ...(mine.skus || {}) } };
+      arrived();
+    }, onErr);
+    db.doc("mod/hidden").onSnapshot(snap => {
+      S.hidden = (snap.exists && snap.data().ids) || {}; arrived();
+    }, onErr);
+  }
+  render();
+  boot();
+})();
+</script>
+</body>
+</html>
